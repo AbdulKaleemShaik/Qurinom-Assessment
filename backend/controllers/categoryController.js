@@ -5,7 +5,7 @@ const createCategory = async (req, res, next) => {
     try {
         const { name, description, attributes } = req.body;
 
-        // Check if category already exists
+
         const existing = await Category.exists({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
         if (existing) {
             return res.status(400).json({
@@ -35,7 +35,7 @@ const createCategory = async (req, res, next) => {
 
 const getCategories = async (req, res, next) => {
     try {
-        const categories = await Category.find().sort({ name: 1 });
+        const categories = await Category.find({ deleteStatus: { $ne: true } }).sort({ name: 1 });
 
         res.json({
             success: true,
@@ -51,7 +51,7 @@ const getCategoryById = async (req, res, next) => {
     try {
         const category = await Category.findById(req.params.id);
 
-        if (!category) {
+        if (!category || category.deleteStatus) {
             return res.status(404).json({
                 success: false,
                 message: 'Category not found'
@@ -72,14 +72,14 @@ const updateCategory = async (req, res, next) => {
         const { name, description, attributes } = req.body;
 
         const category = await Category.findById(req.params.id);
-        if (!category) {
+        if (!category || category.deleteStatus) {
             return res.status(404).json({
                 success: false,
                 message: 'Category not found'
             });
         }
 
-        // Update fields
+
         if (name) {
             category.name = name;
             category.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -101,16 +101,16 @@ const updateCategory = async (req, res, next) => {
 
 const deleteCategory = async (req, res, next) => {
     try {
-        const existing = await Category.exists({ _id: req.params.id });
-        if (!existing) {
+        const category = await Category.findById(req.params.id);
+        if (!category || category.deleteStatus) {
             return res.status(404).json({
                 success: false,
                 message: 'Category not found'
             });
         }
 
-        // Check if products exist under this category
-        const productCount = await Product.countDocuments({ category: req.params.id });
+
+        const productCount = await Product.countDocuments({ category: req.params.id, deleteStatus: { $ne: true } });
         if (productCount > 0) {
             return res.status(400).json({
                 success: false,
@@ -118,7 +118,8 @@ const deleteCategory = async (req, res, next) => {
             });
         }
 
-        await Category.findByIdAndDelete(req.params.id);
+        category.deleteStatus = true;
+        await category.save();
 
         res.json({
             success: true,

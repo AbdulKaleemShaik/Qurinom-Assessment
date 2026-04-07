@@ -26,7 +26,11 @@ const productSchema = new mongoose.Schema({
         of: mongoose.Schema.Types.Mixed,
         default: new Map()
     },
-    images: [String]
+    images: [String],
+    deleteStatus: {
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Product', productSchema);

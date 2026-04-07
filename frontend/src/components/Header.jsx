@@ -17,7 +17,7 @@ function Header() {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Determine the page title
+
     let pageTitle = pageTitles[location.pathname] || 'Product Details';
     if (location.pathname.startsWith('/products/') && location.pathname !== '/products/add') {
         pageTitle = 'Product Details';

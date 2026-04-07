@@ -1,6 +1,6 @@
 const { getESClient, isESAvailable } = require('../config/elasticsearch');
 
-// Index a product in Elasticsearch
+
 const indexProduct = async (product, category) => {
     if (!isESAvailable()) return;
 
@@ -36,7 +36,7 @@ const indexProduct = async (product, category) => {
     }
 };
 
-// Remove a product from Elasticsearch
+
 const removeProduct = async (productId) => {
     if (!isESAvailable()) return;
 
@@ -55,7 +55,7 @@ const removeProduct = async (productId) => {
     }
 };
 
-// Search products using Elasticsearch
+
 const searchProducts = async ({ query, category, filters, page, limit }) => {
     if (!isESAvailable()) return null;
 
@@ -66,7 +66,7 @@ const searchProducts = async ({ query, category, filters, page, limit }) => {
         const must = [];
         const filterClauses = [];
 
-        // Text search
+
         if (query && query.trim()) {
             must.push({
                 multi_match: {
@@ -78,14 +78,22 @@ const searchProducts = async ({ query, category, filters, page, limit }) => {
             });
         }
 
-        // Category filter
+
         if (category) {
-            filterClauses.push({
-                term: { categorySlug: category }
-            });
+            if (category.match(/^[0-9a-fA-F]{24}$/)) {
+                // If it looks like an ObjectId, search the category field (which stores the ID)
+                filterClauses.push({
+                    term: { category: category }
+                });
+            } else {
+                // Otherwise, search the categorySlug field
+                filterClauses.push({
+                    term: { categorySlug: category }
+                });
+            }
         }
 
-        // Dynamic specification filters
+
         if (filters) {
             for (const [key, value] of Object.entries(filters)) {
                 if (value === null || value === undefined || value === '') continue;
@@ -97,9 +105,14 @@ const searchProducts = async ({ query, category, filters, page, limit }) => {
                     filterClauses.push({ range: { price: range } });
                 } else if (key === 'brand') {
                     if (Array.isArray(value)) {
-                        filterClauses.push({ terms: { 'brand.keyword': value } });
+                        filterClauses.push({
+                            bool: {
+                                should: value.map(v => ({ match: { brand: v } })),
+                                minimum_should_match: 1
+                            }
+                        });
                     } else {
-                        filterClauses.push({ term: { 'brand.keyword': value } });
+                        filterClauses.push({ match: { brand: value } });
                     }
                 } else {
                     const specField = `specifications.${key}`;

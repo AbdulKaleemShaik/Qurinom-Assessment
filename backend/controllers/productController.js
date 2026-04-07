@@ -8,16 +8,16 @@ const createProduct = async (req, res, next) => {
     try {
         const { name, category, price, brand, description, highlights, specifications, images } = req.body;
 
-        // Validate that category exists
+
         const categoryDoc = await Category.findById(category);
-        if (!categoryDoc) {
+        if (!categoryDoc || categoryDoc.deleteStatus) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid category ID'
             });
         }
 
-        // Dynamic validation: check specifications against category attributes
+
         const validationErrors = validateSpecifications(specifications, categoryDoc.attributes);
         if (validationErrors.length > 0) {
             return res.status(400).json({
@@ -41,12 +41,12 @@ const createProduct = async (req, res, next) => {
             images: images || []
         });
 
-        // Index in Elasticsearch (non-blocking)
+
         indexProduct(product, categoryDoc).catch(err => {
             console.warn('ES indexing failed:', err.message);
         });
 
-        // Format response using already-fetched categoryDoc (saves a database trip)
+
         const productResponse = product.toJSON();
         productResponse.category = {
             _id: categoryDoc._id,
@@ -71,14 +71,14 @@ const getProducts = async (req, res, next) => {
         const limit = parseInt(req.query.limit) || 12;
         const skip = (page - 1) * limit;
 
-        
-        // Build filter query
-        const filter = {};
+
+
+        const filter = { deleteStatus: { $ne: true } };
         if (req.query.category) {
             filter.category = new mongoose.Types.ObjectId(req.query.category);
         }
 
-        // Use $facet to run both data query and total count dynamically in one round trip
+
         const aggregationResult = await Product.aggregate([
             { $match: filter },
             { $sort: { createdAt: -1 } },
@@ -125,7 +125,7 @@ const getProductById = async (req, res, next) => {
         const product = await Product.findById(req.params.id)
             .populate('category', 'name slug attributes');
 
-        if (!product) {
+        if (!product || product.deleteStatus) {
             return res.status(404).json({
                 success: false,
                 message: 'Product not found'
@@ -144,7 +144,7 @@ const getProductById = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
     try {
         const product = await Product.findById(req.params.id);
-        if (!product) {
+        if (!product || product.deleteStatus) {
             return res.status(404).json({
                 success: false,
                 message: 'Product not found'
@@ -155,7 +155,7 @@ const updateProduct = async (req, res, next) => {
 
         const targetCategoryId = category || product.category;
         const categoryDoc = await Category.findById(targetCategoryId);
-        if (!categoryDoc) {
+        if (!categoryDoc || categoryDoc.deleteStatus) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid category ID'
@@ -187,12 +187,12 @@ const updateProduct = async (req, res, next) => {
 
         await product.save();
 
-        // Re-index in Elasticsearch
+
         indexProduct(product, categoryDoc).catch(err => {
             console.warn('ES re-indexing failed:', err.message);
         });
 
-        // Format response using already-fetched categoryDoc (saves a database trip)
+
         const productResponse = product.toJSON();
         productResponse.category = {
             _id: categoryDoc._id,
@@ -214,16 +214,17 @@ const updateProduct = async (req, res, next) => {
 const deleteProduct = async (req, res, next) => {
     try {
         const product = await Product.findById(req.params.id);
-        if (!product) {
+        if (!product || product.deleteStatus) {
             return res.status(404).json({
                 success: false,
                 message: 'Product not found'
             });
         }
 
-        await Product.findByIdAndDelete(req.params.id);
+        product.deleteStatus = true;
+        await product.save();
 
-        // Remove from Elasticsearch
+
         removeProduct(req.params.id).catch(err => {
             console.warn('ES removal failed:', err.message);
         });
@@ -237,7 +238,7 @@ const deleteProduct = async (req, res, next) => {
     }
 };
 
-// Helper: Validate product specifications against category attribute definitions
+
 function validateSpecifications(specifications, attributes) {
     const errors = [];
 
@@ -249,7 +250,7 @@ function validateSpecifications(specifications, attributes) {
     for (const attr of attributes) {
         const value = specifications[attr.key];
 
-        // Check required fields
+
         if (attr.required && (value === undefined || value === null || value === '')) {
             errors.push(`"${attr.name}" is required`);
             continue;
@@ -257,7 +258,7 @@ function validateSpecifications(specifications, attributes) {
 
         if (value === undefined || value === null || value === '') continue;
 
-        // Type validation
+
         switch (attr.type) {
             case 'number':
                 if (isNaN(Number(value))) {

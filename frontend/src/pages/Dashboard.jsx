@@ -19,8 +19,8 @@ function Dashboard() {
     const loadStats = async () => {
         try {
             const [catRes, prodRes] = await Promise.all([
-                categoryAPI.getAll(),
-                productAPI.getAll({ limit: 1 })
+                categoryAPI.getAllCategories(),
+                productAPI.getAllProducts({ limit: 1 })
             ]);
 
             setStats({

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { searchAPI, categoryAPI } from '../api/axios';
 import DynamicFilters from '../components/DynamicFilters';
 import ProductCard from '../components/ProductCard';
+import ConfirmModal from '../components/ConfirmModal';
 import { productAPI } from '../api/axios';
 import './SearchProducts.css';
 
@@ -22,39 +23,42 @@ function SearchProducts() {
     const [loading, setLoading] = useState(false);
     const [filtersLoading, setFiltersLoading] = useState(false);
     const [sortBy, setSortBy] = useState('relevance');
+    const [deletingId, setDeletingId] = useState(null);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+    const [searchTrigger, setSearchTrigger] = useState(0);
 
     useEffect(() => {
         loadCategories();
     }, []);
 
-    // Load filters when category changes
     useEffect(() => {
         if (selectedCategory) {
             loadFilters(selectedCategory);
         } else {
             setFilters([]);
-            setActiveFilters({});
+            setActiveFilters(prev => Object.keys(prev).length === 0 ? prev : {});
         }
     }, [selectedCategory]);
 
-    // Search when filters, query, or sort changes
     useEffect(() => {
         performSearch();
-    }, [activeFilters, selectedCategory, sortBy, pagination.page]);
+    }, [activeFilters, selectedCategory, sortBy, pagination.page, searchTrigger]);
 
-    // Search on initial load if query param present
     useEffect(() => {
         const q = searchParams.get('q');
         if (q) {
             setSearchQuery(q);
-            performSearch();
+            setSearchTrigger(t => t + 1);
         }
     }, [searchParams]);
 
     const loadCategories = async () => {
         try {
-            const res = await categoryAPI.getAll();
-            setCategories(res.data);
+            const res = await categoryAPI.getAllCategories();
+            if (res.success) {
+                setCategories(res.data);
+            }
         } catch (error) {
             console.error('Failed to load categories:', error);
         }
@@ -86,7 +90,6 @@ function SearchProducts() {
                 sortOrder: sortBy === 'price_asc' ? 'asc' : 'desc'
             };
 
-            // Normalize sort
             if (sortBy === 'price_asc' || sortBy === 'price_desc') {
                 payload.sortBy = 'price';
                 payload.sortOrder = sortBy === 'price_asc' ? 'asc' : 'desc';
@@ -109,7 +112,7 @@ function SearchProducts() {
     const handleSearch = (e) => {
         e.preventDefault();
         setPagination(prev => ({ ...prev, page: 1 }));
-        performSearch();
+        setSearchTrigger(t => t + 1);
     };
 
     const handleCategoryChange = (slug) => {
@@ -136,15 +139,21 @@ function SearchProducts() {
         setPagination(prev => ({ ...prev, page: 1 }));
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Delete this product?')) return;
+    const executeDelete = async () => {
         try {
-            await productAPI.delete(id);
+            await productAPI.deleteProduct(deletingId);
             toast.success('Product deleted');
-            performSearch();
+            setSearchTrigger(t => t + 1);
         } catch (error) {
             toast.error('Failed to delete');
+        } finally {
+            setDeletingId(null);
         }
+    };
+
+    const handleDeleteClick = (id) => {
+        setDeletingId(id);
+        setIsConfirmOpen(true);
     };
 
     return (
@@ -249,7 +258,7 @@ function SearchProducts() {
                                     <ProductCard
                                         key={product._id}
                                         product={product}
-                                        onDelete={handleDelete}
+                                        onDelete={handleDeleteClick}
                                     />
                                 ))}
                             </div>
@@ -279,6 +288,17 @@ function SearchProducts() {
                     )}
                 </div>
             </div>
+
+            <ConfirmModal 
+                isOpen={isConfirmOpen}
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setDeletingId(null);
+                }}
+                onConfirm={executeDelete}
+                title="Delete Product"
+                message="Are you sure you want to permanently delete this product? This action cannot be undone."
+            />
         </div>
     );
 }

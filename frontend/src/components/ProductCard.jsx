@@ -12,7 +12,7 @@ function ProductCard({ product, onDelete }) {
         maximumFractionDigits: 0
     }).format(product.price);
 
-    // Get first 3 specifications to show as preview
+
     const specPreview = [];
     if (product.specifications) {
         const specs = product.specifications instanceof Map

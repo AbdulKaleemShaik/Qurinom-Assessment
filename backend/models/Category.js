@@ -20,7 +20,11 @@ const categorySchema = new mongoose.Schema({
         unique: true
     },
     description: String,
-    attributes: [attributeSchema]
+    attributes: [attributeSchema],
+    deleteStatus: {
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Category', categorySchema);

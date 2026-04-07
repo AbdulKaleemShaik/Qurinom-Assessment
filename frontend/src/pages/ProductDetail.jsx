@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiEdit2, FiTrash2, FiTag, FiStar, FiCheck } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { productAPI } from '../api/axios';
+import ConfirmModal from '../components/ConfirmModal';
 import './ProductDetail.css';
 
 function ProductDetail() {
@@ -10,6 +11,7 @@ function ProductDetail() {
     const navigate = useNavigate();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     useEffect(() => {
         loadProduct();
@@ -17,7 +19,7 @@ function ProductDetail() {
 
     const loadProduct = async () => {
         try {
-            const res = await productAPI.getById(id);
+            const res = await productAPI.getProductById(id);
             setProduct(res.data);
         } catch (error) {
             toast.error('Failed to load product');
@@ -28,11 +30,10 @@ function ProductDetail() {
     };
 
     const handleDelete = async () => {
-        if (!window.confirm('Are you sure you want to delete this product?')) return;
 
         try {
-            await productAPI.delete(id);
-            toast.success('Product deleted');
+            await productAPI.deleteProduct(id);
+            toast.success('Product deleted successfully');
             navigate('/products');
         } catch (error) {
             toast.error(error.message || 'Failed to delete product');
@@ -57,7 +58,7 @@ function ProductDetail() {
         maximumFractionDigits: 0
     }).format(product.price);
 
-    // Get specifications with attribute metadata
+
     const getSpecsWithMeta = () => {
         const specs = product.specifications instanceof Map
             ? Object.fromEntries(product.specifications)
@@ -84,7 +85,7 @@ function ProductDetail() {
                     <FiArrowLeft /> Back to Products
                 </button>
                 <div className="detail-actions">
-                    <button className="btn btn-danger btn-sm" onClick={handleDelete}>
+                    <button className="btn btn-danger btn-sm" onClick={() => setIsConfirmOpen(true)}>
                         <FiTrash2 /> Delete
                     </button>
                 </div>
@@ -161,6 +162,14 @@ function ProductDetail() {
                 })}</span>
                 <span>ID: {product._id}</span>
             </div>
+
+            <ConfirmModal 
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleDelete}
+                title="Delete Product"
+                message={`Are you sure you want to delete "${product.name}"? This action cannot be undone.`}
+            />
         </div>
     );
 }

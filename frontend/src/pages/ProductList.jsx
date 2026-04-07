@@ -4,6 +4,7 @@ import { FiPlus, FiPackage } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { productAPI, categoryAPI } from '../api/axios';
 import ProductCard from '../components/ProductCard';
+import ConfirmModal from '../components/ConfirmModal';
 import './ProductList.css';
 
 function ProductList() {
@@ -13,6 +14,8 @@ function ProductList() {
     const [loading, setLoading] = useState(true);
     const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [deletingId, setDeletingId] = useState(null);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     useEffect(() => {
         loadCategories();
@@ -24,8 +27,10 @@ function ProductList() {
 
     const loadCategories = async () => {
         try {
-            const res = await categoryAPI.getAll();
-            setCategories(res.data);
+            const res = await categoryAPI.getAllCategories();
+            if (res.success) {
+                setCategories(res.data);
+            }
         } catch (error) {
             console.error('Failed to load categories:', error);
         }
@@ -37,13 +42,15 @@ function ProductList() {
             const params = { page: pagination.page, limit: 12 };
             if (selectedCategory) params.category = selectedCategory;
 
-            const res = await productAPI.getAll(params);
-            setProducts(res.data);
-            setPagination(prev => ({
-                ...prev,
-                pages: res.pagination.pages,
-                total: res.pagination.total
-            }));
+            const res = await productAPI.getAllProducts(params);
+            if (res.success) {
+                setProducts(res.data);
+                setPagination(prev => ({
+                    ...prev,
+                    pages: res.pagination.pages,
+                    total: res.pagination.total
+                }));
+            }
         } catch (error) {
             toast.error('Failed to load products');
         } finally {
@@ -51,16 +58,21 @@ function ProductList() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this product?')) return;
-
+    const executeDelete = async () => {
         try {
-            await productAPI.delete(id);
-            toast.success('Product deleted');
+            await productAPI.deleteProduct(deletingId);
+            toast.success('Product deleted successfully');
             loadProducts();
         } catch (error) {
             toast.error(error.message || 'Failed to delete product');
+        } finally {
+            setDeletingId(null);
         }
+    };
+
+    const handleDeleteClick = (id) => {
+        setDeletingId(id);
+        setIsConfirmOpen(true);
     };
 
     const handleCategoryFilter = (categoryId) => {
@@ -128,7 +140,7 @@ function ProductList() {
                             <ProductCard
                                 key={product._id}
                                 product={product}
-                                onDelete={handleDelete}
+                                onDelete={handleDeleteClick}
                             />
                         ))}
                     </div>
@@ -156,6 +168,17 @@ function ProductList() {
                     )}
                 </>
             )}
+
+            <ConfirmModal 
+                isOpen={isConfirmOpen}
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setDeletingId(null);
+                }}
+                onConfirm={executeDelete}
+                title="Delete Product"
+                message="Are you sure you want to permanently delete this product? This action cannot be undone."
+            />
         </div>
     );
 }

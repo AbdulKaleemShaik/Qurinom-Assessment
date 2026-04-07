@@ -30,8 +30,10 @@ function AddProduct() {
 
     const loadCategories = async () => {
         try {
-            const res = await categoryAPI.getAll();
-            setCategories(res.data);
+            const res = await categoryAPI.getAllCategories();
+            if (res.success) {
+                setCategories(res.data);
+            }
         } catch (error) {
             toast.error('Failed to load categories');
         } finally {
@@ -49,8 +51,10 @@ function AddProduct() {
         }
 
         try {
-            const res = await categoryAPI.getById(categoryId);
-            setCategoryData(res.data);
+            const res = await categoryAPI.getCategoryById(categoryId);
+            if (res.success) {
+                setCategoryData(res.data);
+            }
         } catch (error) {
             toast.error('Failed to load category details');
         }
@@ -115,9 +119,11 @@ function AddProduct() {
                 specifications: formData.specifications
             };
 
-            const res = await productAPI.create(payload);
-            toast.success('Product created successfully!');
-            navigate(`/products/${res.data._id}`);
+            const res = await productAPI.createProduct(payload);
+            if (res.success) {
+                toast.success('Product created successfully!');
+                navigate(`/products/${res.data._id}`);
+            }
         } catch (error) {
             toast.error(error.message || 'Failed to create product');
             if (error.errors) {

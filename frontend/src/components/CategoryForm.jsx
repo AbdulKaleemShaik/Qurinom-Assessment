@@ -41,7 +41,6 @@ function CategoryForm({ category = null, onSubmit, onCancel }) {
         const updated = [...attributes];
         updated[index] = { ...updated[index], [field]: value };
 
-        // Auto-generate key from name
         if (field === 'name') {
             updated[index].key = value
                 .toLowerCase()

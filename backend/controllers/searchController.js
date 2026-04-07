@@ -20,7 +20,7 @@ const getFilters = async (req, res, next) => {
             categoryDoc = await Category.findOne({ slug: category });
         }
 
-        if (!categoryDoc) {
+        if (!categoryDoc || categoryDoc.deleteStatus) {
             return res.status(404).json({
                 success: false,
                 message: 'Category not found'
@@ -53,7 +53,7 @@ const getFilters = async (req, res, next) => {
         }
 
         const [aggResult] = await Product.aggregate([
-            { $match: { category: categoryDoc._id } },
+            { $match: { category: categoryDoc._id, deleteStatus: { $ne: true } } },
             { $facet: facetStage }
         ]);
 
@@ -122,16 +122,21 @@ const searchProducts = async (req, res, next) => {
 
         if (isESAvailable()) {
             const esResults = await esSearch({ query, category, filters, page, limit });
-            
+
             if (esResults) {
-                const productIds = esResults.hits.map(hit => hit.id);
-                
-                const products = await Product.find({ _id: { $in: productIds } })
-                    .populate('category', 'name slug attributes');
-                
-                const orderedProducts = productIds.map(id => 
-                    products.find(p => p._id.toString() === id.toString())
-                ).filter(Boolean);
+                const orderedProducts = esResults.hits.map(hit => ({
+                    _id: hit.id,
+                    name: hit.name,
+                    brand: hit.brand,
+                    description: hit.description,
+                    category: {
+                        _id: hit.category,
+                        slug: hit.categorySlug
+                    },
+                    price: hit.price,
+                    highlights: hit.highlights,
+                    specifications: hit.specifications
+                }));
 
                 return res.json({
                     success: true,
@@ -144,7 +149,7 @@ const searchProducts = async (req, res, next) => {
                     },
                     query,
                     appliedFilters: filters,
-                    source: 'elasticsearch' 
+                    source: 'elasticsearch'
                 });
             }
         }

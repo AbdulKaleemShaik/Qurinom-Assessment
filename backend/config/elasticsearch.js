@@ -18,12 +18,12 @@ const connectElasticsearch = async () => {
             }
         });
 
-        // Check if Elasticsearch is running
+
         const health = await esClient.cluster.health();
         isElasticsearchAvailable = true;
         console.log(`Elasticsearch Connected: ${health.cluster_name} (status: ${health.status})`);
 
-        // Create products index if it doesn't exist
+
         const indexExists = await esClient.indices.exists({ index: 'products' });
         if (!indexExists) {
             await esClient.indices.create({
