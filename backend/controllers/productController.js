@@ -1,5 +1,7 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+const mongoose = require('mongoose');
+
 const { indexProduct, removeProduct } = require('../services/searchService');
 
 const createProduct = async (req, res, next) => {
@@ -25,8 +27,11 @@ const createProduct = async (req, res, next) => {
             });
         }
 
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
         const product = await Product.create({
             name,
+            slug,
             category,
             price,
             brand,
@@ -41,12 +46,18 @@ const createProduct = async (req, res, next) => {
             console.warn('ES indexing failed:', err.message);
         });
 
-        // Populate category for response
-        await product.populate('category', 'name slug attributes');
+        // Format response using already-fetched categoryDoc (saves a database trip)
+        const productResponse = product.toJSON();
+        productResponse.category = {
+            _id: categoryDoc._id,
+            name: categoryDoc.name,
+            slug: categoryDoc.slug,
+            attributes: categoryDoc.attributes
+        };
 
         res.status(201).json({
             success: true,
-            data: product,
+            data: productResponse,
             message: 'Product created successfully'
         });
     } catch (error) {
@@ -60,20 +71,39 @@ const getProducts = async (req, res, next) => {
         const limit = parseInt(req.query.limit) || 12;
         const skip = (page - 1) * limit;
 
+        
         // Build filter query
         const filter = {};
         if (req.query.category) {
-            filter.category = req.query.category;
+            filter.category = new mongoose.Types.ObjectId(req.query.category);
         }
 
-        const [products, total] = await Promise.all([
-            Product.find(filter)
-                .populate('category', 'name slug attributes')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit),
-            Product.countDocuments(filter)
+        // Use $facet to run both data query and total count dynamically in one round trip
+        const aggregationResult = await Product.aggregate([
+            { $match: filter },
+            { $sort: { createdAt: -1 } },
+            {
+                $facet: {
+                    metadata: [{ $count: 'total' }],
+                    data: [
+                        { $skip: skip },
+                        { $limit: limit },
+                        {
+                            $lookup: {
+                                from: 'categories',        // MongoDB collection name for Category
+                                localField: 'category',
+                                foreignField: '_id',
+                                as: 'category'
+                            }
+                        },
+                        { $unwind: '$category' }
+                    ]
+                }
+            }
         ]);
+
+        const total = aggregationResult[0].metadata.length > 0 ? aggregationResult[0].metadata[0].total : 0;
+        const products = aggregationResult[0].data;
 
         res.json({
             success: true,
@@ -123,7 +153,6 @@ const updateProduct = async (req, res, next) => {
 
         const { name, category, price, brand, description, highlights, specifications, images } = req.body;
 
-        // If category is being changed, validate specifications against new category
         const targetCategoryId = category || product.category;
         const categoryDoc = await Category.findById(targetCategoryId);
         if (!categoryDoc) {
@@ -144,8 +173,10 @@ const updateProduct = async (req, res, next) => {
             }
         }
 
-        // Update fields
-        if (name) product.name = name;
+        if (name) {
+            product.name = name;
+            product.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        }
         if (category) product.category = category;
         if (price !== undefined) product.price = price;
         if (brand !== undefined) product.brand = brand;
@@ -154,9 +185,6 @@ const updateProduct = async (req, res, next) => {
         if (specifications) product.specifications = specifications;
         if (images) product.images = images;
 
-        // Reset slug if name changed
-        if (name) product.slug = undefined;
-
         await product.save();
 
         // Re-index in Elasticsearch
@@ -164,11 +192,18 @@ const updateProduct = async (req, res, next) => {
             console.warn('ES re-indexing failed:', err.message);
         });
 
-        await product.populate('category', 'name slug attributes');
+        // Format response using already-fetched categoryDoc (saves a database trip)
+        const productResponse = product.toJSON();
+        productResponse.category = {
+            _id: categoryDoc._id,
+            name: categoryDoc.name,
+            slug: categoryDoc.slug,
+            attributes: categoryDoc.attributes
+        };
 
         res.json({
             success: true,
-            data: product,
+            data: productResponse,
             message: 'Product updated successfully'
         });
     } catch (error) {

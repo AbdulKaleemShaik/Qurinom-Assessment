@@ -36,7 +36,6 @@ export const productAPI = {
 
 // Search APIs
 export const searchAPI = {
-    quickSearch: (q) => API.get('/search', { params: { q } }),
     getFilters: (category) => API.get('/search/filters', { params: { category } }),
     searchProducts: (data) => API.post('/search/products', data)
 };

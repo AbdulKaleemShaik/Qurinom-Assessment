@@ -8,7 +8,6 @@ const indexProduct = async (product, category) => {
     if (!client) return;
 
     try {
-        // Flatten specifications for ES indexing
         const specs = {};
         if (product.specifications) {
             for (const [key, value] of product.specifications) {
@@ -31,7 +30,6 @@ const indexProduct = async (product, category) => {
             }
         });
 
-        // Refresh index to make the document searchable immediately
         await client.indices.refresh({ index: 'products' });
     } catch (error) {
         console.warn('Elasticsearch indexing error:', error.message);
@@ -123,7 +121,7 @@ const searchProducts = async ({ query, category, filters, page, limit }) => {
                     filter: filterClauses
                 }
             },
-            sort: query && query.trim() ? ['_score', { _id: 'desc' }] : [{ _id: 'desc' }]
+            sort: query && query.trim() ? ['_score', { _doc: 'desc' }] : [{ _doc: 'desc' }]
         };
 
         const result = await client.search({

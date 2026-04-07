@@ -7,20 +7,18 @@ import App from './App.jsx';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
-    <StrictMode>
-        <BrowserRouter>
-            <App />
-            <ToastContainer
-                position="top-right"
-                autoClose={3000}
-                hideProgressBar={false}
-                newestOnTop
-                closeOnClick
-                pauseOnFocusLoss={false}
-                draggable
-                pauseOnHover
-                theme="colored"
-            />
-        </BrowserRouter>
-    </StrictMode>
+    <BrowserRouter>
+        <App />
+        <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            pauseOnFocusLoss={false}
+            draggable
+            pauseOnHover
+            theme="colored"
+        />
+    </BrowserRouter>
 );
