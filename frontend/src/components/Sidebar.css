@@ -1,0 +1,123 @@
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    background: var(--bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-brand-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-gradient);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.sidebar-brand-text h1 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+}
+
+.sidebar-brand-text span {
+    font-size: 0.75rem;
+    color: var(--text-sidebar);
+    opacity: 0.7;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 16px 12px;
+}
+
+.nav-section-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-sidebar);
+    opacity: 0.5;
+    padding: 0 12px;
+    margin-bottom: 8px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    color: var(--text-sidebar);
+    font-size: 0.875rem;
+    font-weight: 400;
+    transition: all var(--transition-fast);
+    margin-bottom: 2px;
+}
+
+.nav-item:hover {
+    background: var(--bg-sidebar-hover);
+    color: white;
+}
+
+.nav-item.active {
+    background: var(--bg-sidebar-active);
+    color: var(--text-sidebar-active);
+    font-weight: 500;
+}
+
+.nav-item.active .nav-icon {
+    color: var(--primary);
+}
+
+.nav-icon {
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-footer-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-footer-text span {
+    font-size: 0.75rem;
+    color: var(--text-sidebar);
+    opacity: 0.5;
+}
+
+.sidebar-footer-text .version {
+    font-size: 0.6875rem;
+    opacity: 0.3;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+}

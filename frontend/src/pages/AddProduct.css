@@ -1,0 +1,73 @@
+.add-product-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.highlights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.highlight-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.highlight-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.highlight-remove:hover {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.cat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cat-info-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+}
+
+.cat-info-label {
+    color: var(--text-muted);
+}
+
+.cat-info-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.submit-btn {
+    font-size: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .add-product-layout {
+        grid-template-columns: 1fr;
+    }
+}
